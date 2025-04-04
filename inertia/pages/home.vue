@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { ref, type PropType } from "vue";
 import Button from "~/components/ui/button/Button.vue";
 import Card from "~/components/ui/card/Card.vue";
 import CardContent from "~/components/ui/card/CardContent.vue";
@@ -10,13 +10,15 @@ import Label from "~/components/ui/label/Label.vue";
 import RadioGroup from "~/components/ui/radio-group/RadioGroup.vue";
 import RadioGroupItem from "~/components/ui/radio-group/RadioGroupItem.vue";
 import Slider from "~/components/ui/slider/Slider.vue";
+import type { ConvertedImage } from "../../types/types";
 
 defineProps({
-	info: String,
+	convertedImage: Array as PropType<ConvertedImage[]>,
+	zipUrl: String,
 });
 
 type FormType = {
-	files: File | null;
+	files: File[] | [];
 	format: string;
 	quality: number;
 };
@@ -24,7 +26,7 @@ type FormType = {
 const quality = ref(80);
 
 const form = useForm<FormType>({
-	files: null,
+	files: [],
 	format: "webp",
 	quality: quality.value,
 });
@@ -40,10 +42,8 @@ function onChangeFile(event: Event) {
 	const files = target.files;
 
 	if (files) {
-		console.log(files[0]);
-		form.files = files[0];
+		form.files = [...form.files, ...Array.from(files)];
 	}
-	console.log(form.files);
 }
 
 function onUpdateQuality(value: number[] | undefined) {
@@ -93,6 +93,7 @@ function onUpdateQuality(value: number[] | undefined) {
 							Drop file here
 						</Label>
 						<input
+							multiple
 							type="file"
 							name="file"
 							id="file"
@@ -117,10 +118,35 @@ function onUpdateQuality(value: number[] | undefined) {
 							@update:model-value="onUpdateQuality"
 						/>
 					</div>
-					<div class="w-full" v-if="form.files">
-						<p class="text-xs text-gray-500">
-							{{ form.files?.name }}
-						</p>
+					<ul
+						class="w-full"
+						v-for="file in form.files"
+						v-if="!convertedImage"
+					>
+						<li class="text-xs text-gray-500">
+							{{ file.name }}
+						</li>
+					</ul>
+					<ul v-for="image in convertedImage" class="w-full" v-else>
+						<li>
+							<a
+								:href="image.url"
+								download
+								class="text-xs w-full text-gray-500 flex justify-between items-center"
+							>
+								<span>{{ image.name }}</span>
+								<span>Download</span>
+							</a>
+						</li>
+					</ul>
+					<div v-if="zipUrl">
+						<a
+							:href="zipUrl"
+							download
+							class="text-xs text-gray-500"
+						>
+							Download all images (ZIP)
+						</a>
 					</div>
 					<div>
 						<Button
@@ -129,15 +155,6 @@ function onUpdateQuality(value: number[] | undefined) {
 							>Send</Button
 						>
 					</div>
-
-					<a
-						v-if="info"
-						:href="info"
-						download
-						class="text-xs text-gray-500"
-					>
-						Download the image
-					</a>
 				</CardContent>
 			</form>
 		</Card>
